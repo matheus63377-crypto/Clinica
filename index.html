@@ -18,10 +18,10 @@
     <div style="background:white; padding:30px; border-radius:12px; width:90%; max-width:380px; text-align:center; box-shadow:0 10px 25px rgba(0,0,0,0.3);">
       <i class="fas fa-paw" style="font-size:3rem; color:#10b981; margin-bottom:15px;"></i>
       <h2 style="margin-bottom:5px; color:#0f172a;">Barracão Center Pet</h2>
-      <p style="color:#64748b; font-size:0.9rem; margin-bottom:20px;">Digite a senha para acessar o sistema</p>
+      <p style="color:#64748b; font-size:0.9rem; margin-bottom:20px;">Digite sua senha de acesso</p>
       <form onsubmit="validarLogin(event)">
         <div style="margin-bottom:15px;">
-          <input type="password" id="senha-acesso" placeholder="Digite a senha..." style="width:100%; padding:12px; border:1px solid #cbd5e1; border-radius:8px; font-size:1rem; text-align:center;" required>
+          <input type="password" id="senha-acesso" placeholder="Senha..." style="width:100%; padding:12px; border:1px solid #cbd5e1; border-radius:8px; font-size:1rem; text-align:center;" required>
         </div>
         <button type="submit" class="btn btn-primary btn-block" style="padding:12px; font-size:1rem;">Entrar no Sistema</button>
       </form>
@@ -45,21 +45,22 @@
           <span id="sync-status" style="font-size: 0.85rem; background: rgba(255,255,255,0.2); padding: 5px 10px; border-radius: 20px; margin-right: 10px;">
             <i class="fas fa-sync fa-spin"></i> Conectando...
           </span>
-          <button class="btn btn-light btn-sm" onclick="exportarDados()"><i class="fas fa-download"></i> Backup Dados</button>
+          <button class="btn btn-light btn-sm" onclick="exportarDados()"><i class="fas fa-download"></i> Backup</button>
+          <button class="btn btn-light btn-sm" onclick="logout()" style="background:rgba(239,68,68,0.3);" title="Sair"><i class="fas fa-sign-out-alt"></i></button>
         </div>
       </div>
     </header>
 
     <div class="main-container">
       <!-- NAVEGAÇÃO / ABAS -->
-      <nav class="nav-tabs">
+      <nav class="nav-tabs" id="nav-tabs-container">
         <button class="tab-btn active" onclick="switchTab('agenda')"><i class="fas fa-calendar-day"></i> Agenda do Dia</button>
-        <button class="tab-btn" onclick="switchTab('consultas')"><i class="fas fa-stethoscope"></i> Consultas</button>
+        <button class="tab-btn adm-only" onclick="switchTab('consultas')"><i class="fas fa-stethoscope"></i> Consultas</button>
         <button class="tab-btn" onclick="switchTab('banhotosa')"><i class="fas fa-cut"></i> Banho e Tosa</button>
-        <button class="tab-btn" onclick="switchTab('cirurgias')"><i class="fas fa-microscope"></i> Cirurgias</button>
-        <button class="tab-btn" onclick="switchTab('vacinas')"><i class="fas fa-syringe"></i> Vacinas</button>
-        <button class="tab-btn" onclick="switchTab('crm')"><i class="fas fa-address-card"></i> Clientes (CRM)</button>
-        <button class="tab-btn" onclick="switchTab('financas')"><i class="fas fa-chart-line"></i> Finanças & Saídas</button>
+        <button class="tab-btn adm-only" onclick="switchTab('cirurgias')"><i class="fas fa-microscope"></i> Cirurgias</button>
+        <button class="tab-btn adm-only" onclick="switchTab('vacinas')"><i class="fas fa-syringe"></i> Vacinas</button>
+        <button class="tab-btn adm-only" onclick="switchTab('crm')"><i class="fas fa-address-card"></i> Clientes (CRM)</button>
+        <button class="tab-btn adm-only" onclick="switchTab('financas')"><i class="fas fa-chart-line"></i> Finanças & Despesas</button>
       </nav>
 
       <!-- ABA 1: AGENDA -->
@@ -76,7 +77,7 @@
       </section>
 
       <!-- ABA 2: CONSULTAS -->
-      <section id="consultas" class="tab-content">
+      <section id="consultas" class="tab-content adm-only-section">
         <div class="section-title">
           <h2><i class="fas fa-user-md text-primary"></i> Consultas Agendadas</h2>
           <button class="btn btn-primary" onclick="openModal('modal-consulta')"><i class="fas fa-plus"></i> Nova Consulta</button>
@@ -113,7 +114,7 @@
       </section>
 
       <!-- ABA 4: CIRURGIAS -->
-      <section id="cirurgias" class="tab-content">
+      <section id="cirurgias" class="tab-content adm-only-section">
         <div class="section-title">
           <h2><i class="fas fa-procedures text-primary"></i> Agendamento de Cirurgias</h2>
           <button class="btn btn-primary" onclick="openModal('modal-cirurgia')"><i class="fas fa-plus"></i> Nova Cirurgia</button>
@@ -122,7 +123,7 @@
       </section>
 
       <!-- ABA 5: VACINAS -->
-      <section id="vacinas" class="tab-content">
+      <section id="vacinas" class="tab-content adm-only-section">
         <div class="section-title">
           <h2><i class="fas fa-syringe text-primary"></i> Cartão de Vacinas dos Pets</h2>
           <button class="btn btn-primary" onclick="openModal('modal-vacina')"><i class="fas fa-plus"></i> Registrar Vacina</button>
@@ -137,7 +138,7 @@
       </section>
 
       <!-- ABA 6: CLIENTES (CRM) -->
-      <section id="crm" class="tab-content">
+      <section id="crm" class="tab-content adm-only-section">
         <div class="section-title">
           <h2><i class="fas fa-users text-primary"></i> Cartões de Clientes (CRM)</h2>
         </div>
@@ -151,9 +152,9 @@
       </section>
 
       <!-- ABA 7: FINANÇAS -->
-      <section id="financas" class="tab-content">
+      <section id="financas" class="tab-content adm-only-section">
         <div class="section-title">
-          <h2><i class="fas fa-wallet text-primary"></i> Controle Financeiro & Saídas do Dia</h2>
+          <h2><i class="fas fa-wallet text-primary"></i> Controle Financeiro & Despesas</h2>
         </div>
 
         <div class="stats-row">
@@ -162,7 +163,7 @@
             <span class="stat-value text-success" id="fin-entradas">R$ 0,00</span>
           </div>
           <div class="stat-card">
-            <span class="stat-title">Saídas / Despesas</span>
+            <span class="stat-title">Saídas / Despesas do Dia</span>
             <span class="stat-value text-danger" id="fin-saidas">R$ 0,00</span>
           </div>
           <div class="stat-card">
@@ -173,11 +174,18 @@
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
           <div class="detail-card">
-            <h3 class="mb-2"><i class="fas fa-cart-plus text-success"></i> Registrar Nova Saída / Venda</h3>
-            <form id="form-venda" onsubmit="salvarVenda(event)">
+            <h3 class="mb-2"><i class="fas fa-exchange-alt text-primary"></i> Registrar Movimentação</h3>
+            <form id="form-venda" onsubmit="salvarTransacao(event)">
               <div class="form-group">
-                <label>Item Vendido / Saída</label>
-                <input type="text" id="venda-item" placeholder="Ex: Saco Ração 15kg, Colar..." required>
+                <label>Tipo de Movimentação</label>
+                <select id="trans-tipo" required>
+                  <option value="entrada">Entrada (Venda / Recebimento)</option>
+                  <option value="saida">Saída / Despesa (Pagamento / Compra)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Descrição (Item ou Despesa)</label>
+                <input type="text" id="venda-item" placeholder="Ex: Saco Ração 15kg, Conta de Luz..." required>
               </div>
               <div class="form-group">
                 <label>Quantidade</label>
@@ -187,12 +195,12 @@
                 <label>Valor Total (R$)</label>
                 <input type="number" step="0.01" id="venda-valor" required>
               </div>
-              <button type="submit" class="btn btn-primary btn-block">Registrar Venda</button>
+              <button type="submit" class="btn btn-primary btn-block">Salvar Movimentação</button>
             </form>
           </div>
 
           <div class="detail-card">
-            <h3 class="mb-2"><i class="fas fa-list text-primary"></i> Vendas / Saídas Registradas Hoje</h3>
+            <h3 class="mb-2"><i class="fas fa-list text-primary"></i> Registros de Hoje</h3>
             <div id="vendas-hoje-list"></div>
             <h3 class="mb-2" style="margin-top: 20px;"><i class="fas fa-chart-bar text-primary"></i> Mais Vendidos (Geral)</h3>
             <div id="top-itens-list"></div>
@@ -268,6 +276,24 @@
           <div style="display:flex; gap:10px; margin-top:20px;">
             <button type="button" class="btn btn-secondary" onclick="closeModal('modal-vacina')">Cancelar</button>
             <button type="submit" class="btn btn-primary" style="flex:1;">Salvar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL PARA ADICIONAR VACINA DIRETO NO CARTÃO EXISTENTE -->
+    <div id="modal-vacina-direta" class="modal">
+      <div class="modal-content">
+        <h3>Adicionar Dose ao Cartão</h3>
+        <form onsubmit="salvarVacinaDireta(event)">
+          <input type="hidden" id="vd-petkey">
+          <div class="form-group"><label>Pet: <strong id="vd-pet-label"></strong></label></div>
+          <div class="form-group"><label>Nome da Vacina / Dose*</label><input type="text" id="vd-nome" required></div>
+          <div class="form-group"><label>Data da Aplicação*</label><input type="datetime-local" id="vd-data" required></div>
+          <div class="form-group"><label>Data de Retorno / Reforço (Opcional)</label><input type="datetime-local" id="vd-retorno"></div>
+          <div style="display:flex; gap:10px; margin-top:20px;">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('modal-vacina-direta')">Cancelar</button>
+            <button type="submit" class="btn btn-primary" style="flex:1;">Adicionar</button>
           </div>
         </form>
       </div>
