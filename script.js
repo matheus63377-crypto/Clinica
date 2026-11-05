@@ -1,5 +1,6 @@
-// SENHA PADRÃO DE ACESSO DO SISTEMA
-const SENHA_MESTRAS = "pet123";
+// SENHAS DE ACESSO
+const SENHA_MESTRE = "pet123";          // Acesso total (Adm)
+const SENHA_FUNCIONARIO = "funcionario123"; // Acesso restrito (Agenda e Banho/Tosa)
 
 // Configuração do Firebase
 const firebaseConfig = {
@@ -27,31 +28,51 @@ let state = {
 };
 
 let selectedDate = new Date().toISOString().split('T')[0];
+let currentUserRole = localStorage.getItem('bcp_role') || null;
 
 document.addEventListener("DOMContentLoaded", () => {
-  // Verifica se já fez login anteriormente neste dispositivo
-  if (localStorage.getItem('bcp_logged') === 'true') {
-    iniciarApp();
+  if (currentUserRole) {
+    iniciarApp(currentUserRole);
   }
 });
 
 function validarLogin(e) {
   e.preventDefault();
-  const senhaInput = document.getElementById('senha-acesso').value;
-  if (senhaInput === SENHA_MESTRAS) {
+  const senhaInput = document.getElementById('senha-acesso').value.trim();
+  
+  if (senhaInput === SENHA_MESTRE) {
     localStorage.setItem('bcp_logged', 'true');
-    iniciarApp();
+    localStorage.setItem('bcp_role', 'adm');
+    iniciarApp('adm');
+  } else if (senhaInput === SENHA_FUNCIONARIO) {
+    localStorage.setItem('bcp_logged', 'true');
+    localStorage.setItem('bcp_role', 'funcionario');
+    iniciarApp('funcionario');
   } else {
     document.getElementById('login-erro').style.display = 'block';
   }
 }
 
-function iniciarApp() {
+function logout() {
+  localStorage.removeItem('bcp_logged');
+  localStorage.removeItem('bcp_role');
+  location.reload();
+}
+
+function iniciarApp(role) {
+  currentUserRole = role;
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app-content').style.display = 'block';
   document.getElementById('selected-date-input').value = selectedDate;
 
-  // Conecta ao banco de dados em tempo real
+  // Se for funcionário, oculta as abas de ADM
+  if (role === 'funcionario') {
+    document.querySelectorAll('.adm-only').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.adm-only-section').forEach(el => el.style.display = 'none');
+    switchTab('agenda');
+  }
+
+  // Conecta ao banco em tempo real
   db.ref('barracao_data').on('value', (snapshot) => {
     const data = snapshot.val();
     if (data) {
@@ -74,12 +95,14 @@ function iniciarApp() {
 
 function renderAll() {
   loadAgenda();
-  renderConsultas();
+  if (currentUserRole === 'adm') {
+    renderConsultas();
+    renderCirurgias();
+    renderVacinas();
+    renderCRM();
+    renderFinancas();
+  }
   renderBanhoTosa();
-  renderCirurgias();
-  renderVacinas();
-  renderCRM();
-  renderFinancas();
 }
 
 function saveData() {
@@ -102,7 +125,9 @@ function syncCRM(tutor, tel, pet) {
   }
 }
 
+// Funções de Exclusão (Apenas ADM)
 function removerConsulta(id) {
+  if (currentUserRole !== 'adm') return;
   if (confirm("Tem certeza que deseja cancelar esta consulta?")) {
     state.consultas = state.consultas.filter(c => c.id !== id);
     saveData();
@@ -117,6 +142,7 @@ function removerBanhoTosa(id) {
 }
 
 function removerCirurgia(id) {
+  if (currentUserRole !== 'adm') return;
   if (confirm("Tem certeza que deseja desmarcar esta cirurgia?")) {
     state.cirurgias = state.cirurgias.filter(c => c.id !== id);
     saveData();
@@ -124,6 +150,7 @@ function removerCirurgia(id) {
 }
 
 function removerVacinaItem(petKey, vacinaId) {
+  if (currentUserRole !== 'adm') return;
   if (confirm("Deseja apagar este registro de vacina do cartão do pet?")) {
     let card = state.vacinas.find(v => v.petKey === petKey);
     if (card) {
@@ -137,13 +164,15 @@ function removerVacinaItem(petKey, vacinaId) {
 }
 
 function removerVenda(id) {
-  if (confirm("Tem certeza que deseja remover este item das vendas?")) {
+  if (currentUserRole !== 'adm') return;
+  if (confirm("Tem certeza que deseja remover este registro financeiro?")) {
     state.vendas = state.vendas.filter(v => v.id !== id);
     saveData();
   }
 }
 
 function removerCRM(id) {
+  if (currentUserRole !== 'adm') return;
   if (confirm("Tem certeza que deseja excluir este cliente dos cartões salvos?")) {
     state.crm = state.crm.filter(c => c.id !== id);
     saveData();
@@ -244,16 +273,54 @@ function salvarVacina(e) {
   document.getElementById('modal-vacina').querySelector('form').reset();
 }
 
-function salvarVenda(e) {
+// ABRIR MODAL DE ADICIONAR VACINA DIRETO NO CARTÃO
+function abrirVacinaDireta(petKey) {
+  let card = state.vacinas.find(v => v.petKey === petKey);
+  if (!card) return;
+  document.getElementById('vd-petkey').value = petKey;
+  document.getElementById('vd-pet-label').innerText = `${card.pet} (Tutor: ${card.tutor})`;
+  openModal('modal-vacina-direta');
+}
+
+function salvarVacinaDireta(e) {
   e.preventDefault();
-  const v = {
+  const petKey = document.getElementById('vd-petkey').value;
+  const nomeVacina = document.getElementById('vd-nome').value.trim();
+  const dataAplicacao = document.getElementById('vd-data').value;
+  const dataRetorno = document.getElementById('vd-retorno').value;
+
+  let card = state.vacinas.find(v => v.petKey === petKey);
+  if (card) {
+    if (!card.itens) card.itens = [];
+    card.itens.push({
+      id: Date.now(),
+      nome: nomeVacina,
+      data: dataAplicacao,
+      retorno: dataRetorno || null
+    });
+    saveData();
+    closeModal('modal-vacina-direta');
+    document.getElementById('modal-vacina-direta').querySelector('form').reset();
+  }
+}
+
+function salvarTransacao(e) {
+  e.preventDefault();
+  const tipo = document.getElementById('trans-tipo').value;
+  const item = document.getElementById('venda-item').value;
+  const qtd = parseInt(document.getElementById('venda-qtd').value);
+  const valor = parseFloat(document.getElementById('venda-valor').value);
+
+  const t = {
     id: Date.now(),
-    item: document.getElementById('venda-item').value,
-    qtd: parseInt(document.getElementById('venda-qtd').value),
-    valor: parseFloat(document.getElementById('venda-valor').value),
+    tipo: tipo, // 'entrada' ou 'saida'
+    item: item,
+    qtd: qtd,
+    valor: valor,
     data: new Date().toISOString()
   };
-  state.vendas.push(v);
+
+  state.vendas.push(t);
   saveData();
   document.getElementById('form-venda').reset();
 }
@@ -263,7 +330,7 @@ function renderConsultas() {
   const searchInput = document.getElementById('search-consultas');
   const search = searchInput ? searchInput.value.toLowerCase() : '';
   const sort = document.getElementById('sort-consultas').value;
-
+  
   let filtered = state.consultas.filter(c => 
     c.tutor.toLowerCase().includes(search) || c.pet.toLowerCase().includes(search)
   );
@@ -334,8 +401,9 @@ function renderVacinas() {
     <div class="detail-card">
       <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:10px;">
         <h3><i class="fas fa-syringe text-primary"></i> ${card.pet}</h3>
-        <span class="btn btn-sm btn-secondary" style="font-size:0.75rem;">Tutor: ${card.tutor}</span>
+        <button onclick="abrirVacinaDireta('${card.petKey}')" class="btn btn-primary btn-sm" title="Adicionar nova dose"><i class="fas fa-plus"></i> Dose</button>
       </div>
+      <p style="margin-bottom:4px;"><strong>Tutor:</strong> ${card.tutor}</p>
       <p style="margin-bottom:12px;"><strong>Contato:</strong> ${card.tel}</p>
       <div style="border-top: 1px solid var(--border); padding-top: 10px;">
         <strong style="font-size:0.85rem; color: var(--text-muted); display:block; margin-bottom:6px;">Histórico de Vacinas:</strong>
@@ -367,10 +435,10 @@ function renderCRM() {
       <div class="card-header-flex">
         <h3 style="margin:0;"><i class="fas fa-user text-primary"></i> ${c.tutor}</h3>
         <div style="display:flex; gap:6px; align-items:center;">
-          <a href="https://wa.me/55${c.tel.replace(/\D/g,'')}" target="_blank" class="whatsapp-btn-right" title="Enviar mensagem no WhatsApp">
+          <a href="https://wa.me/55${c.tel.replace(/\D/g,'')}" target="_blank" class="whatsapp-btn-right" title="WhatsApp">
             <i class="fab fa-whatsapp"></i> WhatsApp
           </a>
-          <button onclick="removerCRM(${c.id})" class="btn btn-sm btn-secondary" style="color:#ef4444; padding:6px 10px;" title="Excluir Cliente">
+          <button onclick="removerCRM(${c.id})" class="btn btn-sm btn-secondary" style="color:#ef4444; padding:6px 10px;" title="Excluir">
             <i class="fas fa-trash"></i>
           </button>
         </div>
@@ -383,36 +451,50 @@ function renderCRM() {
 
 function renderFinancas() {
   const hoje = new Date().toISOString().split('T')[0];
-  const vendasHoje = state.vendas.filter(v => v.data.startsWith(hoje));
-  const total = vendasHoje.reduce((acc, v) => acc + v.valor, 0);
+  const transHoje = state.vendas.filter(v => v.data.startsWith(hoje));
+  
+  const entradas = transHoje.filter(v => !v.tipo || v.tipo === 'entrada').reduce((acc, v) => acc + v.valor, 0);
+  const saidas = transHoje.filter(v => v.tipo === 'saida').reduce((acc, v) => acc + v.valor, 0);
+  const saldo = entradas - saidas;
 
-  document.getElementById('fin-entradas').innerText = `R$ ${total.toFixed(2)}`;
-  document.getElementById('fin-saidas').innerText = `R$ 0,00`;
-  document.getElementById('fin-saldo').innerText = `R$ ${total.toFixed(2)}`;
+  document.getElementById('fin-entradas').innerText = `R$ ${entradas.toFixed(2)}`;
+  document.getElementById('fin-saidas').innerText = `R$ ${saidas.toFixed(2)}`;
+  document.getElementById('fin-saldo').innerText = `R$ ${saldo.toFixed(2)}`;
+  
+  if (saldo < 0) {
+    document.getElementById('fin-saldo').className = "stat-value text-danger";
+  } else {
+    document.getElementById('fin-saldo').className = "stat-value text-success";
+  }
 
-  const vendasListContainer = document.getElementById('vendas-hoje-list');
-  if (vendasListContainer) {
-    if (vendasHoje.length === 0) {
-      vendasListContainer.innerHTML = `<p style="color:var(--text-muted); font-size:0.9rem;">Nenhuma saída registrada hoje.</p>`;
+  const listContainer = document.getElementById('vendas-hoje-list');
+  if (listContainer) {
+    if (transHoje.length === 0) {
+      listContainer.innerHTML = `<p style="color:var(--text-muted); font-size:0.9rem;">Nenhuma movimentação registrada hoje.</p>`;
     } else {
-      vendasListContainer.innerHTML = vendasHoje.map(v => `
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #eee;">
-          <span>${v.qtd}x ${v.item} - <strong>R$ ${v.valor.toFixed(2)}</strong></span>
-          <button onclick="removerVenda(${v.id})" class="btn btn-sm btn-secondary" style="color:#ef4444; padding:2px 8px;"><i class="fas fa-trash"></i></button>
-        </div>
-      `).join('');
+      listContainer.innerHTML = transHoje.map(v => {
+        const isSaida = v.tipo === 'saida';
+        const cor = isSaida ? 'text-danger' : 'text-success';
+        const sinal = isSaida ? '-' : '+';
+        return `
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #eee;">
+            <span>${v.qtd}x ${v.item} - <strong class="${cor}">${sinal} R$ ${v.valor.toFixed(2)}</strong></span>
+            <button onclick="removerVenda(${v.id})" class="btn btn-sm btn-secondary" style="color:#ef4444; padding:2px 8px;"><i class="fas fa-trash"></i></button>
+          </div>
+        `;
+      }).join('');
     }
   }
 
   let itemCounts = {};
-  state.vendas.forEach(v => {
+  state.vendas.filter(v => !v.tipo || v.tipo === 'entrada').forEach(v => {
     itemCounts[v.item] = (itemCounts[v.item] || 0) + v.qtd;
   });
 
   document.getElementById('top-itens-list').innerHTML = Object.entries(itemCounts)
     .sort((a,b) => b[1] - a[1])
     .map(([item, qtd]) => `<div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eee;"><span>${item}</span><strong>${qtd} un</strong></div>`)
-    .join('');
+    .join('') || `<p style="color:var(--text-muted); font-size:0.9rem;">Nenhum produto vendido ainda.</p>`;
 }
 
 function loadAgenda() {
@@ -464,9 +546,11 @@ function openModal(id) { document.getElementById(id).style.display = 'flex'; }
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
 function exportarDados() {
+  if (currentUserRole !== 'adm') return;
   const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
   const dlAnchorElem = document.createElement('a');
   dlAnchorElem.setAttribute("href", dataStr);
   dlAnchorElem.setAttribute("download", `backup_barracao_pet_${new Date().toISOString().split('T')[0]}.json`);
   dlAnchorElem.click();
 }
+
