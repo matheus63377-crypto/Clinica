@@ -32,6 +32,7 @@
       <button class="tab-btn" onclick="switchTab('consultas')"><i class="fas fa-stethoscope"></i> Consultas</button>
       <button class="tab-btn" onclick="switchTab('banhotosa')"><i class="fas fa-cut"></i> Banho e Tosa</button>
       <button class="tab-btn" onclick="switchTab('cirurgias')"><i class="fas fa-microscope"></i> Cirurgias</button>
+      <button class="tab-btn" onclick="switchTab('vacinas')"><i class="fas fa-syringe"></i> Vacinas</button>
       <button class="tab-btn" onclick="switchTab('crm')"><i class="fas fa-address-card"></i> Clientes (CRM)</button>
       <button class="tab-btn" onclick="switchTab('financas')"><i class="fas fa-chart-line"></i> Finanças & Saídas</button>
     </nav>
@@ -95,7 +96,22 @@
       <div id="cirurgias-list" class="card-grid"></div>
     </section>
 
-    <!-- ABA 5: CLIENTES (CRM) -->
+    <!-- ABA 5: VACINAS -->
+    <section id="vacinas" class="tab-content">
+      <div class="section-title">
+        <h2><i class="fas fa-syringe text-primary"></i> Cartão de Vacinas dos Pets</h2>
+        <button class="btn btn-primary" onclick="openModal('modal-vacina')"><i class="fas fa-plus"></i> Registrar Vacina</button>
+      </div>
+      <div class="controls-bar">
+        <div class="search-box">
+          <i class="fas fa-search search-icon"></i>
+          <input type="text" id="search-vacinas" placeholder="Buscar por pet ou tutor..." oninput="renderVacinas()">
+        </div>
+      </div>
+      <div id="vacinas-list" class="card-grid"></div>
+    </section>
+
+    <!-- ABA 6: CLIENTES (CRM) -->
     <section id="crm" class="tab-content">
       <div class="section-title">
         <h2><i class="fas fa-users text-primary"></i> Cartões de Clientes (CRM)</h2>
@@ -109,7 +125,7 @@
       <div id="crm-list" class="card-grid"></div>
     </section>
 
-    <!-- ABA 6: FINANÇAS -->
+    <!-- ABA 7: FINANÇAS -->
     <section id="financas" class="tab-content">
       <div class="section-title">
         <h2><i class="fas fa-wallet text-primary"></i> Controle Financeiro & Saídas do Dia</h2>
@@ -208,6 +224,24 @@
         <div class="form-group"><label>Data e Horário*</label><input type="datetime-local" id="cir-data" required></div>
         <div style="display:flex; gap:10px; margin-top:20px;">
           <button type="button" class="btn btn-secondary" onclick="closeModal('modal-cirurgia')">Cancelar</button>
+          <button type="submit" class="btn btn-primary" style="flex:1;">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="modal-vacina" class="modal">
+    <div class="modal-content">
+      <h3>Registrar Vacina</h3>
+      <form onsubmit="salvarVacina(event)">
+        <div class="form-group"><label>Nome Tutor*</label><input type="text" id="v-tutor" required></div>
+        <div class="form-group"><label>Telefone*</label><input type="text" id="v-tel" required></div>
+        <div class="form-group"><label>Nome Pet*</label><input type="text" id="v-pet" required></div>
+        <div class="form-group"><label>Nome da Vacina (Ex: V10, Raiva)*</label><input type="text" id="v-nome" required></div>
+        <div class="form-group"><label>Data da Aplicação*</label><input type="datetime-local" id="v-data" required></div>
+        <div class="form-group"><label>Data de Retorno / Reforço (Opcional)</label><input type="datetime-local" id="v-retorno"></div>
+        <div style="display:flex; gap:10px; margin-top:20px;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-vacina')">Cancelar</button>
           <button type="submit" class="btn btn-primary" style="flex:1;">Salvar</button>
         </div>
       </form>
