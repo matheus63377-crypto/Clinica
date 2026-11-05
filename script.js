@@ -1,16 +1,78 @@
+// SENHA PADRÃO DE ACESSO DO SISTEMA
+const SENHA_MESTRAS = "pet123";
+
+// Configuração do Firebase
+const firebaseConfig = {
+  apiKey: "AIzaSyDmvZrKvhm0pmofPiejBGNT4ItaMz5EpvM",
+  authDomain: "barracao-pet-db.firebaseapp.com",
+  databaseURL: "https://barracao-pet-db-default-rtdb.firebaseio.com",
+  projectId: "barracao-pet-db",
+  storageBucket: "barracao-pet-db.firebasestorage.app",
+  messagingSenderId: "411704840688",
+  appId: "1:411704840688:web:cc47f23cf326021ce68d35",
+  measurementId: "G-RQFLZ71JTN"
+};
+
+// Inicializa o Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
 let state = {
-  consultas: JSON.parse(localStorage.getItem('bcp_consultas')) || [],
-  banhotosa: JSON.parse(localStorage.getItem('bcp_banhotosa')) || [],
-  cirurgias: JSON.parse(localStorage.getItem('bcp_cirurgias')) || [],
-  vacinas: JSON.parse(localStorage.getItem('bcp_vacinas')) || [],
-  vendas: JSON.parse(localStorage.getItem('bcp_vendas')) || [],
-  crm: JSON.parse(localStorage.getItem('bcp_crm')) || []
+  consultas: [],
+  banhotosa: [],
+  cirurgias: [],
+  vacinas: [],
+  vendas: [],
+  crm: []
 };
 
 let selectedDate = new Date().toISOString().split('T')[0];
 
 document.addEventListener("DOMContentLoaded", () => {
+  // Verifica se já fez login anteriormente neste dispositivo
+  if (localStorage.getItem('bcp_logged') === 'true') {
+    iniciarApp();
+  }
+});
+
+function validarLogin(e) {
+  e.preventDefault();
+  const senhaInput = document.getElementById('senha-acesso').value;
+  if (senhaInput === SENHA_MESTRAS) {
+    localStorage.setItem('bcp_logged', 'true');
+    iniciarApp();
+  } else {
+    document.getElementById('login-erro').style.display = 'block';
+  }
+}
+
+function iniciarApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app-content').style.display = 'block';
   document.getElementById('selected-date-input').value = selectedDate;
+
+  // Conecta ao banco de dados em tempo real
+  db.ref('barracao_data').on('value', (snapshot) => {
+    const data = snapshot.val();
+    if (data) {
+      state.consultas = data.consultas || [];
+      state.banhotosa = data.banhotosa || [];
+      state.cirurgias = data.cirurgias || [];
+      state.vacinas = data.vacinas || [];
+      state.vendas = data.vendas || [];
+      state.crm = data.crm || [];
+    }
+
+    const syncStatus = document.getElementById('sync-status');
+    if (syncStatus) {
+      syncStatus.innerHTML = `<i class="fas fa-check-circle" style="color:#10b981;"></i> Sincronizado`;
+    }
+
+    renderAll();
+  });
+}
+
+function renderAll() {
   loadAgenda();
   renderConsultas();
   renderBanhoTosa();
@@ -18,15 +80,10 @@ document.addEventListener("DOMContentLoaded", () => {
   renderVacinas();
   renderCRM();
   renderFinancas();
-});
+}
 
 function saveData() {
-  localStorage.setItem('bcp_consultas', JSON.stringify(state.consultas));
-  localStorage.setItem('bcp_banhotosa', JSON.stringify(state.banhotosa));
-  localStorage.setItem('bcp_cirurgias', JSON.stringify(state.cirurgias));
-  localStorage.setItem('bcp_vacinas', JSON.stringify(state.vacinas));
-  localStorage.setItem('bcp_vendas', JSON.stringify(state.vendas));
-  localStorage.setItem('bcp_crm', JSON.stringify(state.crm));
+  db.ref('barracao_data').set(state);
 }
 
 function switchTab(tabId) {
@@ -45,13 +102,10 @@ function syncCRM(tutor, tel, pet) {
   }
 }
 
-// Funções de Exclusão / Cancelamento
 function removerConsulta(id) {
   if (confirm("Tem certeza que deseja cancelar esta consulta?")) {
     state.consultas = state.consultas.filter(c => c.id !== id);
     saveData();
-    renderConsultas();
-    loadAgenda();
   }
 }
 
@@ -59,8 +113,6 @@ function removerBanhoTosa(id) {
   if (confirm("Tem certeza que deseja desmarcar este banho/tosa?")) {
     state.banhotosa = state.banhotosa.filter(b => b.id !== id);
     saveData();
-    renderBanhoTosa();
-    loadAgenda();
   }
 }
 
@@ -68,8 +120,6 @@ function removerCirurgia(id) {
   if (confirm("Tem certeza que deseja desmarcar esta cirurgia?")) {
     state.cirurgias = state.cirurgias.filter(c => c.id !== id);
     saveData();
-    renderCirurgias();
-    loadAgenda();
   }
 }
 
@@ -82,8 +132,6 @@ function removerVacinaItem(petKey, vacinaId) {
         state.vacinas = state.vacinas.filter(v => v.petKey !== petKey);
       }
       saveData();
-      renderVacinas();
-      loadAgenda();
     }
   }
 }
@@ -92,7 +140,6 @@ function removerVenda(id) {
   if (confirm("Tem certeza que deseja remover este item das vendas?")) {
     state.vendas = state.vendas.filter(v => v.id !== id);
     saveData();
-    renderFinancas();
   }
 }
 
@@ -100,7 +147,6 @@ function removerCRM(id) {
   if (confirm("Tem certeza que deseja excluir este cliente dos cartões salvos?")) {
     state.crm = state.crm.filter(c => c.id !== id);
     saveData();
-    renderCRM();
   }
 }
 
@@ -117,7 +163,9 @@ function salvarConsulta(e) {
   };
   state.consultas.push(c);
   syncCRM(c.tutor, c.tel, c.pet);
-  saveData(); closeModal('modal-consulta'); renderConsultas(); loadAgenda(); renderCRM();
+  saveData();
+  closeModal('modal-consulta');
+  document.getElementById('modal-consulta').querySelector('form').reset();
 }
 
 function salvarBanhoTosa(e) {
@@ -132,7 +180,9 @@ function salvarBanhoTosa(e) {
   };
   state.banhotosa.push(b);
   syncCRM(b.tutor, b.tel, b.pet);
-  saveData(); closeModal('modal-banhotosa'); renderBanhoTosa(); loadAgenda(); renderCRM();
+  saveData();
+  closeModal('modal-banhotosa');
+  document.getElementById('modal-banhotosa').querySelector('form').reset();
 }
 
 function salvarCirurgia(e) {
@@ -148,7 +198,9 @@ function salvarCirurgia(e) {
   };
   state.cirurgias.push(cir);
   syncCRM(cir.tutor, cir.tel, cir.pet);
-  saveData(); closeModal('modal-cirurgia'); renderCirurgias(); loadAgenda(); renderCRM();
+  saveData();
+  closeModal('modal-cirurgia');
+  document.getElementById('modal-cirurgia').querySelector('form').reset();
 }
 
 function salvarVacina(e) {
@@ -161,7 +213,7 @@ function salvarVacina(e) {
   const dataRetorno = document.getElementById('v-retorno').value;
 
   const petKey = `${pet.toLowerCase()}_${tutor.toLowerCase()}`;
-  
+
   let itemVacina = {
     id: Date.now(),
     nome: nomeVacina,
@@ -171,9 +223,10 @@ function salvarVacina(e) {
 
   let existingCard = state.vacinas.find(v => v.petKey === petKey);
   if (existingCard) {
-    existingCard.tutor = tutor; // atualiza caso tenha mudado
+    existingCard.tutor = tutor;
     existingCard.tel = tel;
     existingCard.pet = pet;
+    if (!existingCard.itens) existingCard.itens = [];
     existingCard.itens.push(itemVacina);
   } else {
     state.vacinas.push({
@@ -189,9 +242,6 @@ function salvarVacina(e) {
   saveData();
   closeModal('modal-vacina');
   document.getElementById('modal-vacina').querySelector('form').reset();
-  renderVacinas();
-  loadAgenda();
-  renderCRM();
 }
 
 function salvarVenda(e) {
@@ -206,14 +256,14 @@ function salvarVenda(e) {
   state.vendas.push(v);
   saveData();
   document.getElementById('form-venda').reset();
-  renderFinancas();
 }
 
 function renderConsultas() {
   const container = document.getElementById('consultas-list');
-  const search = document.getElementById('search-consultas').value.toLowerCase();
+  const searchInput = document.getElementById('search-consultas');
+  const search = searchInput ? searchInput.value.toLowerCase() : '';
   const sort = document.getElementById('sort-consultas').value;
-  
+
   let filtered = state.consultas.filter(c => 
     c.tutor.toLowerCase().includes(search) || c.pet.toLowerCase().includes(search)
   );
@@ -237,7 +287,8 @@ function renderConsultas() {
 
 function renderBanhoTosa() {
   const container = document.getElementById('banhotosa-list');
-  const search = document.getElementById('search-banhotosa').value.toLowerCase();
+  const searchInput = document.getElementById('search-banhotosa');
+  const search = searchInput ? searchInput.value.toLowerCase() : '';
   let filtered = state.banhotosa.filter(b => b.tutor.toLowerCase().includes(search) || b.pet.toLowerCase().includes(search));
 
   container.innerHTML = filtered.map(b => `
@@ -270,7 +321,8 @@ function renderCirurgias() {
 
 function renderVacinas() {
   const container = document.getElementById('vacinas-list');
-  const search = document.getElementById('search-vacinas').value.toLowerCase();
+  const searchInput = document.getElementById('search-vacinas');
+  const search = searchInput ? searchInput.value.toLowerCase() : '';
   let filtered = state.vacinas.filter(v => v.pet.toLowerCase().includes(search) || v.tutor.toLowerCase().includes(search));
 
   if (filtered.length === 0) {
@@ -287,7 +339,7 @@ function renderVacinas() {
       <p style="margin-bottom:12px;"><strong>Contato:</strong> ${card.tel}</p>
       <div style="border-top: 1px solid var(--border); padding-top: 10px;">
         <strong style="font-size:0.85rem; color: var(--text-muted); display:block; margin-bottom:6px;">Histórico de Vacinas:</strong>
-        ${card.itens.map(item => `
+        ${(card.itens || []).map(item => `
           <div style="background: #f1f5f9; padding: 8px; border-radius: 6px; margin-bottom: 6px; font-size: 0.9rem; position:relative;">
             <div style="display:flex; justify-content:space-between;">
               <strong>${item.nome}</strong>
@@ -306,7 +358,8 @@ function renderVacinas() {
 
 function renderCRM() {
   const container = document.getElementById('crm-list');
-  const search = document.getElementById('search-crm').value.toLowerCase();
+  const searchInput = document.getElementById('search-crm');
+  const search = searchInput ? searchInput.value.toLowerCase() : '';
   let filtered = state.crm.filter(c => c.tutor.toLowerCase().includes(search) || c.pets.some(p => p.toLowerCase().includes(search)));
 
   container.innerHTML = filtered.map(c => `
@@ -367,11 +420,10 @@ function loadAgenda() {
   const cList = state.consultas.filter(c => c.data.startsWith(dateStr)).map(c => ({...c, tipo: 'Consulta'}));
   const bList = state.banhotosa.filter(b => b.data.startsWith(dateStr)).map(b => ({...b, tipo: 'Banho & Tosa'}));
   const cirList = state.cirurgias.filter(c => c.data.startsWith(dateStr)).map(c => ({...c, tipo: 'Cirurgia'}));
-  
-  // Incluir também os retornos de vacina na agenda do dia correspondente
+
   let vacinaRetornos = [];
   state.vacinas.forEach(card => {
-    card.itens.forEach(item => {
+    (card.itens || []).forEach(item => {
       if (item.retorno && item.retorno.startsWith(dateStr)) {
         vacinaRetornos.push({
           id: item.id,
@@ -388,7 +440,7 @@ function loadAgenda() {
   const container = document.getElementById('agenda-cards');
 
   if(todos.length === 0) {
-    container.innerHTML = `<p style="grid-column: 1/-1; color: var(--text-muted);">Nenhum compromisso ou retorno de vacina para este dia.</p>`;
+    container.innerHTML = `<p style="grid-column: 1/-1; color: var(--text-muted);">Nenhum compromisso para este dia.</p>`;
     return;
   }
 
