@@ -316,7 +316,7 @@ function salvarTransacao(e) {
 
   const t = {
     id: Date.now(),
-    tipo: tipo, // 'entrada' ou 'saida'
+    tipo: tipo,
     item: item,
     qtd: qtd,
     valor: valor,
@@ -326,6 +326,7 @@ function salvarTransacao(e) {
   state.vendas.push(t);
   saveData();
   document.getElementById('form-venda').reset();
+  renderFinancas();
 }
 
 function renderConsultas() {
@@ -453,51 +454,97 @@ function renderCRM() {
 }
 
 function renderFinancas() {
-  const hoje = new Date().toISOString().split('T')[0];
-  const transHoje = state.vendas.filter(v => v.data.startsWith(hoje));
-  
-  const entradas = transHoje.filter(v => !v.tipo || v.tipo === 'entrada').reduce((acc, v) => acc + v.valor, 0);
-  const saidas = transHoje.filter(v => v.tipo === 'saida').reduce((acc, v) => acc + v.valor, 0);
+  const financasSection = document.getElementById('financas');
+  if (!financasSection) return;
+
+  // Cria o seletor de mês e o filtro de dia se ainda não existirem na tela
+  let filterBar = document.getElementById('financas-filter-bar');
+  if (!filterBar) {
+    filterBar = document.createElement('div');
+    filterBar.id = 'financas-filter-bar';
+    filterBar.className = 'controls-bar';
+    filterBar.style.marginBottom = '20px';
+    
+    const mesAtualDefault = new Date().toISOString().slice(0, 7);
+    filterBar.innerHTML = `
+      <div style="display:flex; gap:15px; width:100%; align-items:center; flex-wrap:wrap;">
+        <div>
+          <label style="font-weight:600; font-size:0.9rem; margin-right:8px;">Mês de Referência:</label>
+          <input type="month" id="fin-mes-filtro" value="${mesAtualDefault}" onchange="renderFinancas()" style="padding:8px; border:1px solid var(--border); border-radius:8px;">
+        </div>
+        <div>
+          <label style="font-weight:600; font-size:0.9rem; margin-right:8px;">Filtrar por Dia Específico (Opcional):</label>
+          <input type="date" id="fin-dia-filtro" onchange="renderFinancas()" style="padding:8px; border:1px solid var(--border); border-radius:8px;">
+          <button onclick="document.getElementById('fin-dia-filtro').value=''; renderFinancas();" class="btn btn-sm btn-secondary" style="margin-left:5px;">Ver Mês Todo</button>
+        </div>
+      </div>
+    `;
+    financasSection.insertBefore(filterBar, financasSection.children[1]);
+  }
+
+  const mesInputVal = document.getElementById('fin-mes-filtro')?.value || new Date().toISOString().slice(0, 7);
+  const diaInputVal = document.getElementById('fin-dia-filtro')?.value;
+
+  // 1. Filtra as transações pelo mês selecionado (do dia 1 ao último dia)
+  let transFiltradas = state.vendas.filter(v => v.data.startsWith(mesInputVal));
+
+  // 2. Se o usuário escolheu um dia específico, filtra também por esse dia
+  if (diaInputVal) {
+    transFiltradas = transFiltradas.filter(v => v.data.startsWith(diaInputVal));
+  }
+
+  const entradas = transFiltradas.filter(v => !v.tipo || v.tipo === 'entrada').reduce((acc, v) => acc + v.valor, 0);
+  const saidas = transFiltradas.filter(v => v.tipo === 'saida').reduce((acc, v) => acc + v.valor, 0);
   const saldo = entradas - saidas;
 
   document.getElementById('fin-entradas').innerText = `R$ ${entradas.toFixed(2)}`;
   document.getElementById('fin-saidas').innerText = `R$ ${saidas.toFixed(2)}`;
   document.getElementById('fin-saldo').innerText = `R$ ${saldo.toFixed(2)}`;
   
-  if (saldo < 0) {
-    document.getElementById('fin-saldo').className = "stat-value text-danger";
-  } else {
-    document.getElementById('fin-saldo').className = "stat-value text-success";
+  const saldoEl = document.getElementById('fin-saldo');
+  if (saldoEl) {
+    saldoEl.className = saldo < 0 ? "stat-value text-danger" : "stat-value text-success";
   }
 
   const listContainer = document.getElementById('vendas-hoje-list');
   if (listContainer) {
-    if (transHoje.length === 0) {
-      listContainer.innerHTML = `<p style="color:var(--text-muted); font-size:0.9rem;">Nenhuma movimentação registrada hoje.</p>`;
+    if (transFiltradas.length === 0) {
+      listContainer.innerHTML = `<p style="color:var(--text-muted); font-size:0.9rem;">Nenhuma movimentação encontrada para o período selecionado.</p>`;
     } else {
-      listContainer.innerHTML = transHoje.map(v => {
+      listContainer.innerHTML = transFiltradas.map(v => {
         const isSaida = v.tipo === 'saida';
         const cor = isSaida ? 'text-danger' : 'text-success';
         const sinal = isSaida ? '-' : '+';
+        const dataFormatada = new Date(v.data).toLocaleDateString('pt-BR');
         return `
           <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #eee;">
-            <span>${v.qtd}x ${v.item} - <strong class="${cor}">${sinal} R$ ${v.valor.toFixed(2)}</strong></span>
-            <button onclick="removerVenda(${v.id})" class="btn btn-sm btn-secondary" style="color:#ef4444; padding:2px 8px;"><i class="fas fa-trash"></i></button>
+            <div>
+              <span style="font-size:0.75rem; color:var(--text-muted); display:block;">${dataFormatada}</span>
+              <span>${v.qtd}x ${v.item}</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <strong class="${cor}">${sinal} R$ ${v.valor.toFixed(2)}</strong>
+              <button onclick="removerVenda(${v.id})" class="btn btn-sm btn-secondary" style="color:#ef4444; padding:2px 8px;" title="Excluir"><i class="fas fa-trash"></i></button>
+            </div>
           </div>
         `;
       }).join('');
     }
   }
 
+  // Mais vendidos considerando o mês selecionado
   let itemCounts = {};
-  state.vendas.filter(v => !v.tipo || v.tipo === 'entrada').forEach(v => {
+  state.vendas.filter(v => v.data.startsWith(mesInputVal) && (!v.tipo || v.tipo === 'entrada')).forEach(v => {
     itemCounts[v.item] = (itemCounts[v.item] || 0) + v.qtd;
   });
 
-  document.getElementById('top-itens-list').innerHTML = Object.entries(itemCounts)
-    .sort((a,b) => b[1] - a[1])
-    .map(([item, qtd]) => `<div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eee;"><span>${item}</span><strong>${qtd} un</strong></div>`)
-    .join('') || `<p style="color:var(--text-muted); font-size:0.9rem;">Nenhum produto vendido ainda.</p>`;
+  const topListEl = document.getElementById('top-itens-list');
+  if (topListEl) {
+    topListEl.innerHTML = Object.entries(itemCounts)
+      .sort((a,b) => b[1] - a[1])
+      .map(([item, qtd]) => `<div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eee;"><span>${item}</span><strong>${qtd} un</strong></div>`)
+      .join('') || `<p style="color:var(--text-muted); font-size:0.9rem;">Nenhum produto vendido neste mês.</p>`;
+  }
 }
 
 function loadAgenda() {
