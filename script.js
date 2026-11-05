@@ -78,6 +78,14 @@ function removerVenda(id) {
   }
 }
 
+function removerCRM(id) {
+  if (confirm("Tem certeza que deseja excluir este cliente dos cartões salvos?")) {
+    state.crm = state.crm.filter(c => c.id !== id);
+    saveData();
+    renderCRM();
+  }
+}
+
 function salvarConsulta(e) {
   e.preventDefault();
   const c = {
@@ -206,7 +214,10 @@ function renderCRM() {
 
   container.innerHTML = filtered.map(c => `
     <div class="detail-card">
-      <h3><i class="fas fa-user"></i> ${c.tutor}</h3>
+      <div style="display:flex; justify-content:space-between; align-items:start;">
+        <h3><i class="fas fa-user text-primary"></i> ${c.tutor}</h3>
+        <button onclick="removerCRM(${c.id})" class="btn btn-sm btn-secondary" style="color:#ef4444;" title="Excluir Cliente"><i class="fas fa-trash"></i></button>
+      </div>
       <p><strong>Pets:</strong> ${c.pets.join(', ')}</p>
       <p><strong>Contato:</strong> ${c.tel}</p>
       <a href="https://wa.me/55${c.tel.replace(/\D/g,'')}" target="_blank" class="btn btn-primary btn-sm btn-block" style="margin-top:10px; text-align:center; text-decoration:none;"><i class="fab fa-whatsapp"></i> WhatsApp</a>
@@ -223,7 +234,6 @@ function renderFinancas() {
   document.getElementById('fin-saidas').innerText = `R$ 0,00`;
   document.getElementById('fin-saldo').innerText = `R$ ${total.toFixed(2)}`;
 
-  // Renderizar saídas/vendas de hoje com botão de remover
   const vendasListContainer = document.getElementById('vendas-hoje-list');
   if (vendasListContainer) {
     if (vendasHoje.length === 0) {
@@ -238,7 +248,6 @@ function renderFinancas() {
     }
   }
 
-  // Ranking mais vendidos
   let itemCounts = {};
   state.vendas.forEach(v => {
     itemCounts[v.item] = (itemCounts[v.item] || 0) + v.qtd;
