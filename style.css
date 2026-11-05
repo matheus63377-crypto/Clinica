@@ -193,7 +193,7 @@ header {
 
 .form-group { margin-bottom: 15px; }
 .form-group label { display: block; margin-bottom: 5px; font-weight: 500; font-size: 0.9rem; }
-.form-group input, .form-group textarea {
+.form-group input, .form-group textarea, .form-group select {
   width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px;
 }
 
@@ -201,3 +201,31 @@ header {
 .text-success { color: #10b981; }
 .text-danger { color: #ef4444; }
 .mb-2 { margin-bottom: 10px; }
+
+.card-header-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.whatsapp-btn-right {
+  background-color: #25d366 !important;
+  color: white !important;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.whatsapp-btn-right:hover {
+  background-color: #20ba5a !important;
+}
