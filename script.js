@@ -214,13 +214,19 @@ function renderCRM() {
 
   container.innerHTML = filtered.map(c => `
     <div class="detail-card">
-      <div style="display:flex; justify-content:space-between; align-items:start;">
-        <h3><i class="fas fa-user text-primary"></i> ${c.tutor}</h3>
-        <button onclick="removerCRM(${c.id})" class="btn btn-sm btn-secondary" style="color:#ef4444;" title="Excluir Cliente"><i class="fas fa-trash"></i></button>
+      <div class="card-header-flex">
+        <h3 style="margin:0;"><i class="fas fa-user text-primary"></i> ${c.tutor}</h3>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <a href="https://wa.me/55${c.tel.replace(/\D/g,'')}" target="_blank" class="whatsapp-btn-right" title="Enviar mensagem no WhatsApp">
+            <i class="fab fa-whatsapp"></i> WhatsApp
+          </a>
+          <button onclick="removerCRM(${c.id})" class="btn btn-sm btn-secondary" style="color:#ef4444; padding:6px 10px;" title="Excluir Cliente">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
       </div>
       <p><strong>Pets:</strong> ${c.pets.join(', ')}</p>
       <p><strong>Contato:</strong> ${c.tel}</p>
-      <a href="https://wa.me/55${c.tel.replace(/\D/g,'')}" target="_blank" class="btn btn-primary btn-sm btn-block" style="margin-top:10px; text-align:center; text-decoration:none;"><i class="fab fa-whatsapp"></i> WhatsApp</a>
     </div>
   `).join('');
 }
