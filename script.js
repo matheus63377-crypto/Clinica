@@ -316,7 +316,7 @@ function salvarTransacao(e) {
 
   const t = {
     id: Date.now(),
-    tipo: tipo, // 'entrada' ou 'saida'
+    tipo: tipo,
     item: item,
     qtd: qtd,
     valor: valor,
@@ -453,11 +453,14 @@ function renderCRM() {
 }
 
 function renderFinancas() {
-  const hoje = new Date().toISOString().split('T')[0];
-  const transHoje = state.vendas.filter(v => v.data.startsWith(hoje));
+  // Pega o mês atual no formato YYYY-MM (ex: "2026-11") para o fechamento mensal
+  const mesAtual = new Date().toISOString().slice(0, 7);
   
-  const entradas = transHoje.filter(v => !v.tipo || v.tipo === 'entrada').reduce((acc, v) => acc + v.valor, 0);
-  const saidas = transHoje.filter(v => v.tipo === 'saida').reduce((acc, v) => acc + v.valor, 0);
+  // Filtra todas as movimentações do mês atual
+  const transMes = state.vendas.filter(v => v.data.startsWith(mesAtual));
+  
+  const entradas = transMes.filter(v => !v.tipo || v.tipo === 'entrada').reduce((acc, v) => acc + v.valor, 0);
+  const saidas = transMes.filter(v => v.tipo === 'saida').reduce((acc, v) => acc + v.valor, 0);
   const saldo = entradas - saidas;
 
   document.getElementById('fin-entradas').innerText = `R$ ${entradas.toFixed(2)}`;
@@ -472,17 +475,24 @@ function renderFinancas() {
 
   const listContainer = document.getElementById('vendas-hoje-list');
   if (listContainer) {
-    if (transHoje.length === 0) {
-      listContainer.innerHTML = `<p style="color:var(--text-muted); font-size:0.9rem;">Nenhuma movimentação registrada hoje.</p>`;
+    if (transMes.length === 0) {
+      listContainer.innerHTML = `<p style="color:var(--text-muted); font-size:0.9rem;">Nenhuma movimentação registrada neste mês.</p>`;
     } else {
-      listContainer.innerHTML = transHoje.map(v => {
+      listContainer.innerHTML = transMes.map(v => {
         const isSaida = v.tipo === 'saida';
         const cor = isSaida ? 'text-danger' : 'text-success';
         const sinal = isSaida ? '-' : '+';
+        const dataFormatada = new Date(v.data).toLocaleDateString('pt-BR');
         return `
           <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #eee;">
-            <span>${v.qtd}x ${v.item} - <strong class="${cor}">${sinal} R$ ${v.valor.toFixed(2)}</strong></span>
-            <button onclick="removerVenda(${v.id})" class="btn btn-sm btn-secondary" style="color:#ef4444; padding:2px 8px;"><i class="fas fa-trash"></i></button>
+            <div>
+              <span style="font-size:0.75rem; color:var(--text-muted); display:block;">${dataFormatada}</span>
+              <span>${v.qtd}x ${v.item}</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <strong class="${cor}">${sinal} R$ ${v.valor.toFixed(2)}</strong>
+              <button onclick="removerVenda(${v.id})" class="btn btn-sm btn-secondary" style="color:#ef4444; padding:2px 8px;"><i class="fas fa-trash"></i></button>
+            </div>
           </div>
         `;
       }).join('');
