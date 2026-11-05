@@ -42,6 +42,42 @@ function syncCRM(tutor, tel, pet) {
   }
 }
 
+// Funções de Exclusão / Cancelamento
+function removerConsulta(id) {
+  if (confirm("Tem certeza que deseja cancelar esta consulta?")) {
+    state.consultas = state.consultas.filter(c => c.id !== id);
+    saveData();
+    renderConsultas();
+    loadAgenda();
+  }
+}
+
+function removerBanhoTosa(id) {
+  if (confirm("Tem certeza que deseja desmarcar este banho/tosa?")) {
+    state.banhotosa = state.banhotosa.filter(b => b.id !== id);
+    saveData();
+    renderBanhoTosa();
+    loadAgenda();
+  }
+}
+
+function removerCirurgia(id) {
+  if (confirm("Tem certeza que deseja desmarcar esta cirurgia?")) {
+    state.cirurgias = state.cirurgias.filter(c => c.id !== id);
+    saveData();
+    renderCirurgias();
+    loadAgenda();
+  }
+}
+
+function removerVenda(id) {
+  if (confirm("Tem certeza que deseja remover este item das vendas?")) {
+    state.vendas = state.vendas.filter(v => v.id !== id);
+    saveData();
+    renderFinancas();
+  }
+}
+
 function salvarConsulta(e) {
   e.preventDefault();
   const c = {
@@ -118,7 +154,10 @@ function renderConsultas() {
 
   container.innerHTML = filtered.map(c => `
     <div class="detail-card">
-      <h3><i class="fas fa-dog text-primary"></i> ${c.pet}</h3>
+      <div style="display:flex; justify-content:space-between; align-items:start;">
+        <h3><i class="fas fa-dog text-primary"></i> ${c.pet}</h3>
+        <button onclick="removerConsulta(${c.id})" class="btn btn-sm btn-secondary" style="color:#ef4444;" title="Cancelar Consulta"><i class="fas fa-trash"></i></button>
+      </div>
       <p><strong>Tutor:</strong> ${c.tutor}</p>
       <p><strong>Contato:</strong> ${c.tel}</p>
       <p><strong>Raça/Idade:</strong> ${c.raca} (${c.idade})</p>
@@ -134,7 +173,10 @@ function renderBanhoTosa() {
 
   container.innerHTML = filtered.map(b => `
     <div class="detail-card">
-      <h3><i class="fas fa-cut text-primary"></i> ${b.pet}</h3>
+      <div style="display:flex; justify-content:space-between; align-items:start;">
+        <h3><i class="fas fa-cut text-primary"></i> ${b.pet}</h3>
+        <button onclick="removerBanhoTosa(${b.id})" class="btn btn-sm btn-secondary" style="color:#ef4444;" title="Cancelar Banho/Tosa"><i class="fas fa-trash"></i></button>
+      </div>
       <p><strong>Tutor:</strong> ${b.tutor} (${b.tel})</p>
       <p><strong>Instruções de Tosa:</strong> ${b.desc}</p>
       <p><strong>Horário:</strong> ${new Date(b.data).toLocaleString('pt-BR')}</p>
@@ -146,7 +188,10 @@ function renderCirurgias() {
   const container = document.getElementById('cirurgias-list');
   container.innerHTML = state.cirurgias.map(c => `
     <div class="detail-card">
-      <h3><i class="fas fa-microscope text-danger"></i> ${c.pet} - ${c.tipo}</h3>
+      <div style="display:flex; justify-content:space-between; align-items:start;">
+        <h3><i class="fas fa-microscope text-danger"></i> ${c.pet} - ${c.tipo}</h3>
+        <button onclick="removerCirurgia(${c.id})" class="btn btn-sm btn-secondary" style="color:#ef4444;" title="Cancelar Cirurgia"><i class="fas fa-trash"></i></button>
+      </div>
       <p><strong>Tutor:</strong> ${c.tutor} (${c.tel})</p>
       <p><strong>Obs:</strong> ${c.obs || 'Nenhuma'}</p>
       <p><strong>Data/Hora:</strong> ${new Date(c.data).toLocaleString('pt-BR')}</p>
@@ -178,6 +223,22 @@ function renderFinancas() {
   document.getElementById('fin-saidas').innerText = `R$ 0,00`;
   document.getElementById('fin-saldo').innerText = `R$ ${total.toFixed(2)}`;
 
+  // Renderizar saídas/vendas de hoje com botão de remover
+  const vendasListContainer = document.getElementById('vendas-hoje-list');
+  if (vendasListContainer) {
+    if (vendasHoje.length === 0) {
+      vendasListContainer.innerHTML = `<p style="color:var(--text-muted); font-size:0.9rem;">Nenhuma saída registrada hoje.</p>`;
+    } else {
+      vendasListContainer.innerHTML = vendasHoje.map(v => `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #eee;">
+          <span>${v.qtd}x ${v.item} - <strong>R$ ${v.valor.toFixed(2)}</strong></span>
+          <button onclick="removerVenda(${v.id})" class="btn btn-sm btn-secondary" style="color:#ef4444; padding:2px 8px;"><i class="fas fa-trash"></i></button>
+        </div>
+      `).join('');
+    }
+  }
+
+  // Ranking mais vendidos
   let itemCounts = {};
   state.vendas.forEach(v => {
     itemCounts[v.item] = (itemCounts[v.item] || 0) + v.qtd;
