@@ -125,7 +125,7 @@ function syncCRM(tutor, tel, pet) {
   }
 }
 
-// Funções de Exclusão (Apenas ADM)
+// Funções de Exclusão
 function removerConsulta(id) {
   if (currentUserRole !== 'adm') return;
   if (confirm("Tem certeza que deseja cancelar esta consulta?")) {
@@ -135,6 +135,10 @@ function removerConsulta(id) {
 }
 
 function removerBanhoTosa(id) {
+  if (currentUserRole !== 'adm') {
+    alert("Apenas administradores podem desmarcar agendamentos!");
+    return;
+  }
   if (confirm("Tem certeza que deseja desmarcar este banho/tosa?")) {
     state.banhotosa = state.banhotosa.filter(b => b.id !== id);
     saveData();
@@ -273,7 +277,6 @@ function salvarVacina(e) {
   document.getElementById('modal-vacina').querySelector('form').reset();
 }
 
-// ABRIR MODAL DE ADICIONAR VACINA DIRETO NO CARTÃO
 function abrirVacinaDireta(petKey) {
   let card = state.vacinas.find(v => v.petKey === petKey);
   if (!card) return;
@@ -362,7 +365,7 @@ function renderBanhoTosa() {
     <div class="detail-card">
       <div style="display:flex; justify-content:space-between; align-items:start;">
         <h3><i class="fas fa-cut text-primary"></i> ${b.pet}</h3>
-        <button onclick="removerBanhoTosa(${b.id})" class="btn btn-sm btn-secondary" style="color:#ef4444;" title="Cancelar Banho/Tosa"><i class="fas fa-trash"></i></button>
+        ${currentUserRole === 'adm' ? `<button onclick="removerBanhoTosa(${b.id})" class="btn btn-sm btn-secondary" style="color:#ef4444;" title="Cancelar Banho/Tosa"><i class="fas fa-trash"></i></button>` : ''}
       </div>
       <p><strong>Tutor:</strong> ${b.tutor} (${b.tel})</p>
       <p><strong>Instruções de Tosa:</strong> ${b.desc}</p>
@@ -553,4 +556,3 @@ function exportarDados() {
   dlAnchorElem.setAttribute("download", `backup_barracao_pet_${new Date().toISOString().split('T')[0]}.json`);
   dlAnchorElem.click();
 }
-
