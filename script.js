@@ -2,6 +2,7 @@ let state = {
   consultas: JSON.parse(localStorage.getItem('bcp_consultas')) || [],
   banhotosa: JSON.parse(localStorage.getItem('bcp_banhotosa')) || [],
   cirurgias: JSON.parse(localStorage.getItem('bcp_cirurgias')) || [],
+  vacinas: JSON.parse(localStorage.getItem('bcp_vacinas')) || [],
   vendas: JSON.parse(localStorage.getItem('bcp_vendas')) || [],
   crm: JSON.parse(localStorage.getItem('bcp_crm')) || []
 };
@@ -14,6 +15,7 @@ document.addEventListener("DOMContentLoaded", () => {
   renderConsultas();
   renderBanhoTosa();
   renderCirurgias();
+  renderVacinas();
   renderCRM();
   renderFinancas();
 });
@@ -22,6 +24,7 @@ function saveData() {
   localStorage.setItem('bcp_consultas', JSON.stringify(state.consultas));
   localStorage.setItem('bcp_banhotosa', JSON.stringify(state.banhotosa));
   localStorage.setItem('bcp_cirurgias', JSON.stringify(state.cirurgias));
+  localStorage.setItem('bcp_vacinas', JSON.stringify(state.vacinas));
   localStorage.setItem('bcp_vendas', JSON.stringify(state.vendas));
   localStorage.setItem('bcp_crm', JSON.stringify(state.crm));
 }
@@ -67,6 +70,21 @@ function removerCirurgia(id) {
     saveData();
     renderCirurgias();
     loadAgenda();
+  }
+}
+
+function removerVacinaItem(petKey, vacinaId) {
+  if (confirm("Deseja apagar este registro de vacina do cartão do pet?")) {
+    let card = state.vacinas.find(v => v.petKey === petKey);
+    if (card) {
+      card.itens = card.itens.filter(i => i.id !== vacinaId);
+      if (card.itens.length === 0) {
+        state.vacinas = state.vacinas.filter(v => v.petKey !== petKey);
+      }
+      saveData();
+      renderVacinas();
+      loadAgenda();
+    }
   }
 }
 
@@ -131,6 +149,49 @@ function salvarCirurgia(e) {
   state.cirurgias.push(cir);
   syncCRM(cir.tutor, cir.tel, cir.pet);
   saveData(); closeModal('modal-cirurgia'); renderCirurgias(); loadAgenda(); renderCRM();
+}
+
+function salvarVacina(e) {
+  e.preventDefault();
+  const tutor = document.getElementById('v-tutor').value.trim();
+  const tel = document.getElementById('v-tel').value.trim();
+  const pet = document.getElementById('v-pet').value.trim();
+  const nomeVacina = document.getElementById('v-nome').value.trim();
+  const dataAplicacao = document.getElementById('v-data').value;
+  const dataRetorno = document.getElementById('v-retorno').value;
+
+  const petKey = `${pet.toLowerCase()}_${tutor.toLowerCase()}`;
+  
+  let itemVacina = {
+    id: Date.now(),
+    nome: nomeVacina,
+    data: dataAplicacao,
+    retorno: dataRetorno || null
+  };
+
+  let existingCard = state.vacinas.find(v => v.petKey === petKey);
+  if (existingCard) {
+    existingCard.tutor = tutor; // atualiza caso tenha mudado
+    existingCard.tel = tel;
+    existingCard.pet = pet;
+    existingCard.itens.push(itemVacina);
+  } else {
+    state.vacinas.push({
+      petKey: petKey,
+      tutor: tutor,
+      tel: tel,
+      pet: pet,
+      itens: [itemVacina]
+    });
+  }
+
+  syncCRM(tutor, tel, pet);
+  saveData();
+  closeModal('modal-vacina');
+  document.getElementById('modal-vacina').querySelector('form').reset();
+  renderVacinas();
+  loadAgenda();
+  renderCRM();
 }
 
 function salvarVenda(e) {
@@ -207,6 +268,42 @@ function renderCirurgias() {
   `).join('');
 }
 
+function renderVacinas() {
+  const container = document.getElementById('vacinas-list');
+  const search = document.getElementById('search-vacinas').value.toLowerCase();
+  let filtered = state.vacinas.filter(v => v.pet.toLowerCase().includes(search) || v.tutor.toLowerCase().includes(search));
+
+  if (filtered.length === 0) {
+    container.innerHTML = `<p style="grid-column: 1/-1; color: var(--text-muted);">Nenhum cartão de vacina cadastrado.</p>`;
+    return;
+  }
+
+  container.innerHTML = filtered.map(card => `
+    <div class="detail-card">
+      <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:10px;">
+        <h3><i class="fas fa-syringe text-primary"></i> ${card.pet}</h3>
+        <span class="btn btn-sm btn-secondary" style="font-size:0.75rem;">Tutor: ${card.tutor}</span>
+      </div>
+      <p style="margin-bottom:12px;"><strong>Contato:</strong> ${card.tel}</p>
+      <div style="border-top: 1px solid var(--border); padding-top: 10px;">
+        <strong style="font-size:0.85rem; color: var(--text-muted); display:block; margin-bottom:6px;">Histórico de Vacinas:</strong>
+        ${card.itens.map(item => `
+          <div style="background: #f1f5f9; padding: 8px; border-radius: 6px; margin-bottom: 6px; font-size: 0.9rem; position:relative;">
+            <div style="display:flex; justify-content:space-between;">
+              <strong>${item.nome}</strong>
+              <button onclick="removerVacinaItem('${card.petKey}', ${item.id})" style="background:none; border:none; color:#ef4444; cursor:pointer;" title="Remover vacina"><i class="fas fa-times"></i></button>
+            </div>
+            <div style="color: var(--text-muted); font-size: 0.8rem; margin-top:2px;">
+              Aplicada em: ${new Date(item.data).toLocaleDateString('pt-BR')}
+              ${item.retorno ? `<br><span class="text-danger" style="font-weight:600;">Retorno/Reforço: ${new Date(item.retorno).toLocaleDateString('pt-BR')}</span>` : ''}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
 function renderCRM() {
   const container = document.getElementById('crm-list');
   const search = document.getElementById('search-crm').value.toLowerCase();
@@ -270,12 +367,28 @@ function loadAgenda() {
   const cList = state.consultas.filter(c => c.data.startsWith(dateStr)).map(c => ({...c, tipo: 'Consulta'}));
   const bList = state.banhotosa.filter(b => b.data.startsWith(dateStr)).map(b => ({...b, tipo: 'Banho & Tosa'}));
   const cirList = state.cirurgias.filter(c => c.data.startsWith(dateStr)).map(c => ({...c, tipo: 'Cirurgia'}));
+  
+  // Incluir também os retornos de vacina na agenda do dia correspondente
+  let vacinaRetornos = [];
+  state.vacinas.forEach(card => {
+    card.itens.forEach(item => {
+      if (item.retorno && item.retorno.startsWith(dateStr)) {
+        vacinaRetornos.push({
+          id: item.id,
+          pet: card.pet,
+          tutor: card.tutor,
+          data: item.retorno,
+          tipo: `Retorno Vacina (${item.nome})`
+        });
+      }
+    });
+  });
 
-  const todos = [...cList, ...bList, ...cirList].sort((a,b) => new Date(a.data) - new Date(b.data));
+  const todos = [...cList, ...bList, ...cirList, ...vacinaRetornos].sort((a,b) => new Date(a.data) - new Date(b.data));
   const container = document.getElementById('agenda-cards');
 
   if(todos.length === 0) {
-    container.innerHTML = `<p style="grid-column: 1/-1; color: var(--text-muted);">Nenhum compromisso para este dia.</p>`;
+    container.innerHTML = `<p style="grid-column: 1/-1; color: var(--text-muted);">Nenhum compromisso ou retorno de vacina para este dia.</p>`;
     return;
   }
 
