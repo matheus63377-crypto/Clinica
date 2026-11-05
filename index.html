@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Barracão Center Pet - Gestão da Clínica</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- CABEÇALHO -->
+  <header>
+    <div class="header-container">
+      <div class="brand">
+        <i class="fas fa-paw brand-icon"></i>
+        <div>
+          <h1>Barracão Center Pet</h1>
+          <p>Dra. Mariana Petrucci • Marília - SP</p>
+        </div>
+      </div>
+      <div class="quick-actions">
+        <button class="btn btn-light btn-sm" onclick="exportarDados()"><i class="fas fa-download"></i> Backup Dados</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="main-container">
+    <!-- NAVEGAÇÃO / ABAS -->
+    <nav class="nav-tabs">
+      <button class="tab-btn active" onclick="switchTab('agenda')"><i class="fas fa-calendar-day"></i> Agenda do Dia</button>
+      <button class="tab-btn" onclick="switchTab('consultas')"><i class="fas fa-stethoscope"></i> Consultas</button>
+      <button class="tab-btn" onclick="switchTab('banhotosa')"><i class="fas fa-cut"></i> Banho e Tosa</button>
+      <button class="tab-btn" onclick="switchTab('cirurgias')"><i class="fas fa-microscope"></i> Cirurgias</button>
+      <button class="tab-btn" onclick="switchTab('crm')"><i class="fas fa-address-card"></i> Clientes (CRM)</button>
+      <button class="tab-btn" onclick="switchTab('financas')"><i class="fas fa-chart-line"></i> Finanças & Saídas</button>
+    </nav>
+
+    <!-- ABA 1: AGENDA -->
+    <section id="agenda" class="tab-content active">
+      <div class="section-title">
+        <h2><i class="fas fa-calendar-alt text-primary"></i> Visão Geral da Agenda</h2>
+        <div class="date-picker-group">
+          <button class="btn btn-secondary btn-sm" onclick="changeDate(-1)"><i class="fas fa-chevron-left"></i> Anterior</button>
+          <input type="date" id="selected-date-input" onchange="loadAgenda()">
+          <button class="btn btn-secondary btn-sm" onclick="changeDate(1)">Próximo <i class="fas fa-chevron-right"></i></button>
+        </div>
+      </div>
+      <div id="agenda-cards" class="card-grid"></div>
+    </section>
+
+    <!-- ABA 2: CONSULTAS -->
+    <section id="consultas" class="tab-content">
+      <div class="section-title">
+        <h2><i class="fas fa-user-md text-primary"></i> Consultas Agendadas</h2>
+        <button class="btn btn-primary" onclick="openModal('modal-consulta')"><i class="fas fa-plus"></i> Nova Consulta</button>
+      </div>
+      <div class="controls-bar">
+        <div class="search-box">
+          <i class="fas fa-search search-icon"></i>
+          <input type="text" id="search-consultas" placeholder="Buscar por cliente ou pet..." oninput="renderConsultas()">
+        </div>
+        <div>
+          <label>Ordenar por: </label>
+          <select id="sort-consultas" onchange="renderConsultas()">
+            <option value="data">Mais Próximas</option>
+            <option value="nome">Ordem Alfabetica (Tutor)</option>
+          </select>
+        </div>
+      </div>
+      <div id="consultas-list" class="card-grid"></div>
+    </section>
+
+    <!-- ABA 3: BANHO E TOSA -->
+    <section id="banhotosa" class="tab-content">
+      <div class="section-title">
+        <h2><i class="fas fa-shower text-primary"></i> Banho e Tosa</h2>
+        <button class="btn btn-primary" onclick="openModal('modal-banhotosa')"><i class="fas fa-plus"></i> Novo Agendamento</button>
+      </div>
+      <div class="controls-bar">
+        <div class="search-box">
+          <i class="fas fa-search search-icon"></i>
+          <input type="text" id="search-banhotosa" placeholder="Buscar por cliente ou pet..." oninput="renderBanhoTosa()">
+        </div>
+      </div>
+      <div id="banhotosa-list" class="card-grid"></div>
+    </section>
+
+    <!-- ABA 4: CIRURGIAS -->
+    <section id="cirurgias" class="tab-content">
+      <div class="section-title">
+        <h2><i class="fas fa-procedures text-primary"></i> Agendamento de Cirurgias</h2>
+        <button class="btn btn-primary" onclick="openModal('modal-cirurgia')"><i class="fas fa-plus"></i> Nova Cirurgia</button>
+      </div>
+      <div id="cirurgias-list" class="card-grid"></div>
+    </section>
+
+    <!-- ABA 5: CLIENTES (CRM) -->
+    <section id="crm" class="tab-content">
+      <div class="section-title">
+        <h2><i class="fas fa-users text-primary"></i> Cartões de Clientes (CRM)</h2>
+      </div>
+      <div class="controls-bar">
+        <div class="search-box">
+          <i class="fas fa-search search-icon"></i>
+          <input type="text" id="search-crm" placeholder="Buscar no cadastro..." oninput="renderCRM()">
+        </div>
+      </div>
+      <div id="crm-list" class="card-grid"></div>
+    </section>
+
+    <!-- ABA 6: FINANÇAS -->
+    <section id="financas" class="tab-content">
+      <div class="section-title">
+        <h2><i class="fas fa-wallet text-primary"></i> Controle Financeiro & Saídas do Dia</h2>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-card">
+          <span class="stat-title">Entradas do Dia</span>
+          <span class="stat-value text-success" id="fin-entradas">R$ 0,00</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-title">Saídas / Despesas</span>
+          <span class="stat-value text-danger" id="fin-saidas">R$ 0,00</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-title">Saldo do Dia</span>
+          <span class="stat-value" id="fin-saldo">R$ 0,00</span>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div class="detail-card">
+          <h3 class="mb-2"><i class="fas fa-cart-plus text-success"></i> Registrar Nova Saída / Venda</h3>
+          <form id="form-venda" onsubmit="salvarVenda(event)">
+            <div class="form-group">
+              <label>Item Vendido / Saída</label>
+              <input type="text" id="venda-item" placeholder="Ex: Saco Ração 15kg, Colar..." required>
+            </div>
+            <div class="form-group">
+              <label>Quantidade</label>
+              <input type="number" id="venda-qtd" min="1" value="1" required>
+            </div>
+            <div class="form-group">
+              <label>Valor Total (R$)</label>
+              <input type="number" step="0.01" id="venda-valor" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Registrar Venda</button>
+          </form>
+        </div>
+
+        <div class="detail-card">
+          <h3 class="mb-2"><i class="fas fa-list text-primary"></i> Itens Mais Vendidos (Mês)</h3>
+          <div id="top-itens-list"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- MODAIS -->
+  <div id="modal-consulta" class="modal">
+    <div class="modal-content">
+      <h3>Agendar Consulta</h3>
+      <form onsubmit="salvarConsulta(event)">
+        <div class="form-group"><label>Nome Tutor*</label><input type="text" id="c-tutor" required></div>
+        <div class="form-group"><label>Telefone*</label><input type="text" id="c-tel" required></div>
+        <div class="form-group"><label>Nome Pet*</label><input type="text" id="c-pet" required></div>
+        <div class="form-group"><label>Raça</label><input type="text" id="c-raca"></div>
+        <div class="form-group"><label>Idade</label><input type="text" id="c-idade"></div>
+        <div class="form-group"><label>Data e Horário*</label><input type="datetime-local" id="c-data" required></div>
+        <div style="display:flex; gap:10px; margin-top:20px;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-consulta')">Cancelar</button>
+          <button type="submit" class="btn btn-primary" style="flex:1;">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="modal-banhotosa" class="modal">
+    <div class="modal-content">
+      <h3>Agendar Banho & Tosa</h3>
+      <form onsubmit="salvarBanhoTosa(event)">
+        <div class="form-group"><label>Nome Tutor*</label><input type="text" id="b-tutor" required></div>
+        <div class="form-group"><label>Telefone*</label><input type="text" id="b-tel" required></div>
+        <div class="form-group"><label>Nome Pet*</label><input type="text" id="b-pet" required></div>
+        <div class="form-group"><label>Descrição da Tosa / Especificações*</label><textarea id="b-desc" rows="3" required></textarea></div>
+        <div class="form-group"><label>Data e Horário*</label><input type="datetime-local" id="b-data" required></div>
+        <div style="display:flex; gap:10px; margin-top:20px;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-banhotosa')">Cancelar</button>
+          <button type="submit" class="btn btn-primary" style="flex:1;">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="modal-cirurgia" class="modal">
+    <div class="modal-content">
+      <h3>Agendar Cirurgia</h3>
+      <form onsubmit="salvarCirurgia(event)">
+        <div class="form-group"><label>Nome Tutor*</label><input type="text" id="cir-tutor" required></div>
+        <div class="form-group"><label>Telefone*</label><input type="text" id="cir-tel" required></div>
+        <div class="form-group"><label>Nome Pet*</label><input type="text" id="cir-pet" required></div>
+        <div class="form-group"><label>Tipo de Cirurgia*</label><input type="text" id="cir-tipo" required></div>
+        <div class="form-group"><label>Observações</label><textarea id="cir-obs" rows="3"></textarea></div>
+        <div class="form-group"><label>Data e Horário*</label><input type="datetime-local" id="cir-data" required></div>
+        <div style="display:flex; gap:10px; margin-top:20px;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-cirurgia')">Cancelar</button>
+          <button type="submit" class="btn btn-primary" style="flex:1;">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
